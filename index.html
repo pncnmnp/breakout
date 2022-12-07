@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Breakout</title>
+  </head>
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://threejs.org/build/three.module.js"
+      }
+    }
+  </script>
+  <body>
+    <canvas id="c" tabindex="0"></canvas>
+  </body>
+  <script type="module">
+    import * as THREE from "three";
+
+    function renderCamera() {
+      const canvas = document.querySelector("#c");
+      const renderer = new THREE.WebGLRenderer({ canvas });
+      const fov = 75;
+      const aspect = 2;
+      const near = 0.1;
+      const far = 5;
+      const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+      camera.position.z = 1;
+
+      return [renderer, camera];
+    }
+
+    function renderLight(scene) {
+      const color = 0xffffff;
+      const intensity = 1;
+      const light = new THREE.DirectionalLight(color, intensity);
+      light.position.set(-1, 2, 4);
+      scene.add(light);
+    }
+
+    function resizeRendererToDisplaySize(renderer) {
+      const canvas = renderer.domElement;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const needResize = canvas.width !== width || canvas.height !== height;
+      if (needResize) {
+        renderer.setSize(width, height, false);
+      }
+      return needResize;
+    }
+
+    function renderPaddle() {
+      const paddle = new THREE.BoxGeometry(0.5, 0.02, 0.05);
+      const material = new THREE.MeshPhongMaterial({ color: 0xd2691e });
+      const paddleMesh = new THREE.Mesh(paddle, material);
+      return paddleMesh;
+    }
+
+    function renderBall() {
+      const ball = new THREE.SphereGeometry(0.03);
+      const material = new THREE.MeshPhongMaterial({ color: 0x778899 });
+      const ballMesh = new THREE.Mesh(ball, material);
+      return ballMesh;
+    }
+
+    function renderBricks(scene) {
+      let bricks = [];
+      let color_index = 0;
+      let colors = [0xf7b937, 0xf3714d, 0xb06ecd, 0x69e87d, 0x0c1f4f, 0x3d7fd8];
+
+      for (let j = 0.5; j > 0.3; j = j - 0.05) {
+        for (let i = -1; i < 0.8; i = i + 0.2) {
+          const brick = new THREE.BoxGeometry(0.15, 0.03, 0.05);
+          const material = new THREE.MeshPhongMaterial({
+            color: colors[color_index],
+          });
+          const brickMesh = new THREE.Mesh(brick, material);
+          brickMesh.position.set(i + 0.2, j, 0);
+          scene.add(brickMesh);
+          bricks.push(brickMesh);
+        }
+        color_index += 1;
+      }
+      return bricks;
+    }
+
+    function main() {
+      const [renderer, camera] = renderCamera();
+      const scene = new THREE.Scene();
+      renderLight(scene);
+      let ball = renderBall();
+      let paddle = renderPaddle();
+      let bricks = renderBricks(scene);
+
+      // setting aspect of the camera to the aspect of the canvas's display size
+      if (resizeRendererToDisplaySize(renderer)) {
+        const canvas = renderer.domElement;
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+      }
+
+      let xDir = 0;
+      document.onkeydown = function (e) {
+        switch (e.keyCode) {
+          case 37:
+            xDir -= 0.1;
+            break;
+          case 39:
+            xDir += 0.1;
+            break;
+        }
+      };
+
+      // setting initial values for required parameters
+      let acceleration = 9.8;
+      let bounce_distance = 0.95;
+      let bottom_position_y = -0.4;
+      let time_step = 0.02;
+      // time_counter is calculated to be the time the ball just reached the top position
+      // this is simply calculated with the s = (1/2)gt*t formula, which is the case when ball is dropped from the top position
+      let time_counter = Math.sqrt((bounce_distance * 2) / acceleration);
+      let initial_speed = acceleration * time_counter;
+      let angle = 0;
+      ball.position.set(xDir, -0.5, 0);
+
+      function render(time) {
+        // reset time_counter back to the start of the bouncing sequence when sphere hits through the bottom position
+        if (ball.position.y < bottom_position_y) {
+          time_counter = 0;
+        }
+        // calculate sphere position with the s2 = s1 + ut + (1/2)gt*t formula
+        // this formula assumes the ball to be bouncing off from the bottom position when time_counter is zero
+        ball.position.y =
+          bottom_position_y +
+          initial_speed * time_counter -
+          0.5 * acceleration * time_counter * time_counter;
+        // advance time
+        time_counter += time_step;
+
+        for (
+          var vertex = 0;
+          vertex < ball.geometry.attributes.position.array.length;
+          vertex++
+        ) {
+          var local_vertex = new THREE.Vector3()
+            .fromBufferAttribute(ball.geometry.attributes.position, vertex)
+            .clone();
+          var global_vertex = local_vertex.applyMatrix4(ball.matrix);
+          var direction_vec = global_vertex.sub(ball.position);
+
+          var ray = new THREE.Raycaster(
+            ball.position,
+            direction_vec.clone().normalize()
+          );
+
+          // does it hit the bricks?
+          var brick_collision = ray.intersectObjects(bricks);
+          if (
+            brick_collision.length > 0 &&
+            brick_collision[0].distance < direction_vec.length()
+          ) {
+            scene.remove(brick_collision[0].object);
+            acceleration *= -1;
+            break;
+          }
+
+          // does it hit the paddle?
+          var paddle_collision = ray.intersectObjects([paddle]);
+          if (
+            paddle_collision.length > 0 &&
+            paddle_collision[0].distance < direction_vec.length()
+          ) {
+            acceleration *= -1;
+            break;
+          }
+        }
+
+        paddle.position.set(xDir, -0.5, 0);
+        ball.position.set(xDir, ball.position.y, 0);
+        scene.add(paddle);
+        scene.add(ball);
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+    }
+    main();
+  </script>
+</html>
