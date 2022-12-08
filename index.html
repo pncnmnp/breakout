@@ -49,9 +49,13 @@
     function renderLight(scene) {
       const color = 0xffffff;
       const intensity = 1;
-      const light = new THREE.DirectionalLight(color, intensity);
-      light.position.set(-1, 2, 4);
-      scene.add(light);
+      const light1 = new THREE.DirectionalLight(color, intensity);
+      light1.position.set(-1, 2, 4);
+      scene.add(light1);
+
+      const light2 = new THREE.DirectionalLight(color, intensity);
+      light2.position.set(1, -2, -4);
+      scene.add(light2);
     }
 
     function resizeRendererToDisplaySize(renderer) {
@@ -79,10 +83,29 @@
       return ballMesh;
     }
 
+    function renderBoundaries(scene) {
+      const material = new THREE.MeshPhongMaterial({ color: 0x5b5b5b });
+
+      const planeLeft = new THREE.BoxGeometry(0.03, 2, 0.2);
+      const planeLeftMesh = new THREE.Mesh(planeLeft, material);
+      planeLeftMesh.position.set(-1.1, 0, 0);
+      scene.add(planeLeftMesh);
+
+      const planeRight = new THREE.BoxGeometry(0.03, 2, 0.2);
+      const planeRightMesh = new THREE.Mesh(planeRight, material);
+      planeRightMesh.position.set(1.1, 0, 0);
+      scene.add(planeRightMesh);
+
+      const planeBehind = new THREE.BoxGeometry(11, 10, 2);
+      const planeBehindMesh = new THREE.Mesh(planeBehind, material);
+      planeBehindMesh.position.set(0, 1, -5);
+      scene.add(planeBehindMesh);
+    }
+
     function renderBricks(scene) {
       let bricks = [];
       let color_index = 0;
-      let colors = [0xf7b937, 0xf3714d, 0xb06ecd, 0x69e87d, 0x0c1f4f, 0x3d7fd8];
+      let colors = [0xffbe0b, 0xfb5607, 0xff006e, 0x8338ec, 0x0c1f4f, 0xff1654];
 
       for (let j = 0.5; j > 0.3; j = j - 0.05) {
         for (let i = -1; i < 0.8; i = i + 0.2) {
@@ -138,6 +161,7 @@
       let ball = renderBall();
       let paddle = renderPaddle();
       let bricks = renderBricks(scene);
+      renderBoundaries(scene);
 
       // setting aspect of the camera to the aspect of the canvas's display size
       if (resizeRendererToDisplaySize(renderer)) {
@@ -155,10 +179,10 @@
       document.onkeydown = function (e) {
         switch (e.keyCode) {
           case 37:
-            paddleX -= 0.1;
+            paddleX -= 0.2;
             break;
           case 39:
-            paddleX += 0.1;
+            paddleX += 0.2;
             break;
         }
       };
@@ -179,6 +203,12 @@
       function render(time) {
         ballDir.x += ballDir.dx;
         ballDir.y += ballDir.dy;
+
+        if (paddleX < -0.8) {
+          paddleX = -0.8;
+        } else if (paddleX > 0.8) {
+          paddleX = 0.8;
+        }
 
         for (
           var vertex = 0;
