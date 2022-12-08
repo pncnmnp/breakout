@@ -18,7 +18,9 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://threejs.org/build/three.module.js"
+        "three": "https://threejs.org/build/three.module.js",
+        "fontLoader": "https://unpkg.com/three@0.147.0/examples/jsm/loaders/FontLoader.js",
+        "geometries": "https://unpkg.com/three@0.147.0/examples/jsm/geometries/TextGeometry.js"
       }
     }
   </script>
@@ -27,6 +29,9 @@
   </body>
   <script type="module">
     import * as THREE from "three";
+    import { FontLoader } from "fontLoader";
+    import { TextGeometry } from "geometries";
+    let text_rendered = {};
 
     function renderCamera() {
       const canvas = document.querySelector("#c");
@@ -95,6 +100,37 @@
       return bricks;
     }
 
+    function render_text(scene, text, color, render_now) {
+      const loader = new FontLoader();
+      let text_mesh = undefined;
+      loader.load(
+        "https://unpkg.com/three@0.147.0/examples/fonts/helvetiker_regular.typeface.json",
+        function (font) {
+          const geometry = new TextGeometry(text, {
+            font: font,
+            size: 1,
+            height: 1,
+            curveSegments: 10,
+            bevelEnabled: true,
+            bevelThickness: 0.25,
+            bevelSize: 0.1,
+            bevelOffset: 0,
+            bevelSegments: 50,
+          });
+          geometry.center();
+          text_mesh = new THREE.Mesh(
+            geometry,
+            new THREE.MeshLambertMaterial({ color: color })
+          );
+          text_mesh.position.set(0, -0.5, -4);
+          if (render_now) {
+            scene.add(text_mesh);
+          }
+          text_rendered[text] = text_mesh;
+        }
+      );
+    }
+
     function main() {
       const [renderer, camera] = renderCamera();
       const scene = new THREE.Scene();
@@ -110,28 +146,39 @@
         camera.updateProjectionMatrix();
       }
 
-      let xDir = 0;
+      // game over text
+      render_text(scene, "Breakout!", 0x566cf8, true);
+      render_text(scene, "Game Over!", 0xa62a04, false);
+
+      let paddleX = 0;
+      let paddleY = -0.5;
       document.onkeydown = function (e) {
         switch (e.keyCode) {
           case 37:
-            xDir -= 0.1;
+            paddleX -= 0.1;
             break;
           case 39:
-            xDir += 0.1;
+            paddleX += 0.1;
             break;
         }
       };
 
-      let yDir = -0.5;
-      let up = true;
-      ball.position.set(xDir, yDir, 0);
+      const ballDir = {
+        x: paddleX,
+        y: paddleY + 0.05,
+        speed: 0.01,
+        dx: 0,
+        dy: 0,
+      };
+      // As it is stationary
+      ballDir.dx = ballDir.speed;
+      ballDir.dy = ballDir.speed;
+      ball.position.set(ballDir.x, ballDir.y, 0);
 
+      let over = false;
       function render(time) {
-        if (up) {
-          yDir += 0.01;
-        } else {
-          yDir -= 0.01;
-        }
+        ballDir.x += ballDir.dx;
+        ballDir.y += ballDir.dy;
 
         for (
           var vertex = 0;
@@ -155,7 +202,9 @@
             paddle_collision.length > 0 &&
             paddle_collision[0].distance < direction_vec.length()
           ) {
-            up = true;
+            ballDir.dy *= -1;
+            ballDir.y += 0.02;
+            // let d = Math.abs(paddle_collision[0].uv.x - 0.5);
             break;
           }
 
@@ -175,17 +224,30 @@
                 bricks.splice(brick_index, 1);
               }
             }
-            up = false;
+            ballDir.dy *= -1;
             break;
-          } else if (yDir > 0.6) {
-            up = false;
+          }
+
+          if (ballDir.y > 0.6) {
+            ballDir.dy *= -1;
+          } else if (ballDir.x > 1 || ballDir.x < -1) {
+            ballDir.dx *= -1;
+          } else if (ballDir.y < paddleY - 0.02) {
+            // game over
+            over = true;
+            scene.remove(text_rendered["Breakout!"]);
+            scene.remove(ball);
+            scene.remove(paddle);
+            scene.add(text_rendered["Game Over!"]);
           }
         }
 
-        paddle.position.set(xDir, -0.5, 0);
-        ball.position.set(xDir, yDir, 0);
-        scene.add(paddle);
-        scene.add(ball);
+        if (!over) {
+          paddle.position.set(paddleX, paddleY, 0);
+          ball.position.set(ballDir.x, ballDir.y, 0);
+          scene.add(paddle);
+          scene.add(ball);
+        }
         renderer.render(scene, camera);
         requestAnimationFrame(render);
       }
