@@ -14,6 +14,17 @@
       height: 100%;
       display: block;
     }
+
+    #score {
+      position: absolute;
+      color: white;
+      width: 100;
+      height: 100;
+      top: 50px;
+      left: 100px;
+      font-size: 32px;
+      font-style: oblique;
+    }
   </style>
   <script type="importmap">
     {
@@ -26,6 +37,7 @@
   </script>
   <body>
     <canvas id="c" tabindex="0"></canvas>
+    <div id="score"></div>
   </body>
   <script type="module">
     import * as THREE from "three";
@@ -70,7 +82,7 @@
     }
 
     function renderPaddle() {
-      const paddle = new THREE.BoxGeometry(0.5, 0.02, 0.05);
+      const paddle = new THREE.BoxGeometry(0.5, 0.02, 0.1);
       const material = new THREE.MeshPhongMaterial({ color: 0xd2691e });
       const paddleMesh = new THREE.Mesh(paddle, material);
       return paddleMesh;
@@ -202,7 +214,7 @@
       const ballDir = {
         x: paddleX,
         y: paddleY + 0.05,
-        z: 0,
+        z: 0.05,
         speed: 0.01,
         dx: 0,
         dy: 0,
@@ -215,6 +227,7 @@
       ball.position.set(ballDir.x, ballDir.y, ballDir.z);
 
       let over = false;
+      let score = 0;
       function render(time) {
         ballDir.x += ballDir.dx;
         ballDir.y += ballDir.dy;
@@ -286,6 +299,9 @@
                 bricks.splice(brick_index, 1);
               }
             }
+            score += 100;
+            var score_div = document.getElementById("score");
+            score_div.innerHTML = "Score: " + score.toString();
             ballDir.dy *= -1;
             break;
           }
@@ -312,6 +328,7 @@
           scene.add(paddle);
           scene.add(ball);
         }
+        console.log(ballDir.x, ballDir.y, ballDir.z);
         renderer.render(scene, camera);
         requestAnimationFrame(render);
       }
