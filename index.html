@@ -105,20 +105,25 @@
     function renderBricks(scene) {
       let bricks = [];
       let color_index = 0;
-      let colors = [0xffbe0b, 0xfb5607, 0xff006e, 0x8338ec, 0x0c1f4f, 0xff1654];
+      let colors = [
+        0xffbe0b, 0xfb5607, 0xff006e, 0x8338ec, 0x0c1f4f, 0xff1654, 0x1b998b,
+        0xed217c, 0x2d3047, 0xfffd82, 0xff9b71,
+      ];
 
-      for (let j = 0.5; j > 0.3; j = j - 0.05) {
-        for (let i = -1; i < 0.8; i = i + 0.2) {
-          const brick = new THREE.BoxGeometry(0.15, 0.03, 0.05);
-          const material = new THREE.MeshPhongMaterial({
-            color: colors[color_index],
-          });
-          const brickMesh = new THREE.Mesh(brick, material);
-          brickMesh.position.set(i + 0.2, j, 0);
-          scene.add(brickMesh);
-          bricks.push(brickMesh);
+      for (let z = 0; z >= -0.2; z = z - 0.2) {
+        for (let j = 0.5; j > 0.3; j = j - 0.05) {
+          for (let i = -1; i < 0.8; i = i + 0.2) {
+            const brick = new THREE.BoxGeometry(0.15, 0.03, 0.05);
+            const material = new THREE.MeshPhongMaterial({
+              color: colors[color_index],
+            });
+            const brickMesh = new THREE.Mesh(brick, material);
+            brickMesh.position.set(i + 0.2, j, z);
+            scene.add(brickMesh);
+            bricks.push(brickMesh);
+          }
+          color_index += 1;
         }
-        color_index += 1;
       }
       return bricks;
     }
@@ -176,13 +181,20 @@
 
       let paddleX = 0;
       let paddleY = -0.5;
+      let paddleZ = 0;
       document.onkeydown = function (e) {
         switch (e.keyCode) {
           case 37:
             paddleX -= 0.2;
             break;
+          case 38:
+            paddleZ -= 0.2;
+            break;
           case 39:
             paddleX += 0.2;
+            break;
+          case 40:
+            paddleZ += 0.2;
             break;
         }
       };
@@ -190,24 +202,45 @@
       const ballDir = {
         x: paddleX,
         y: paddleY + 0.05,
+        z: 0,
         speed: 0.01,
         dx: 0,
         dy: 0,
+        dz: 0,
       };
       // As it is stationary
       ballDir.dx = ballDir.speed;
       ballDir.dy = ballDir.speed;
-      ball.position.set(ballDir.x, ballDir.y, 0);
+      ballDir.dz = ballDir.speed;
+      ball.position.set(ballDir.x, ballDir.y, ballDir.z);
+
+      // Start at z = 0
+      // Keep a var - chance of moving the ball to z = -0.2
+      // When it occurs, move the ball to z = -0.2
+      // And so forth
 
       let over = false;
       function render(time) {
         ballDir.x += ballDir.dx;
         ballDir.y += ballDir.dy;
+        ballDir.z += ballDir.dz;
 
         if (paddleX < -0.8) {
           paddleX = -0.8;
         } else if (paddleX > 0.8) {
           paddleX = 0.8;
+        }
+
+        if (paddleZ < -0.2) {
+          paddleZ = -0.2;
+        } else if (paddleZ > 0) {
+          paddleZ = 0;
+        }
+
+        if (ballDir.z < -0.2) {
+          ballDir.z = -0.2;
+        } else if (ballDir.z > 0) {
+          ballDir.z = 0;
         }
 
         for (
@@ -232,6 +265,10 @@
             paddle_collision.length > 0 &&
             paddle_collision[0].distance < direction_vec.length()
           ) {
+            let prob_z = Math.random();
+            if (prob_z >= 0.5) {
+              ballDir.dz *= -1;
+            }
             ballDir.dy *= -1;
             ballDir.y += 0.02;
             // let d = Math.abs(paddle_collision[0].uv.x - 0.5);
@@ -273,8 +310,8 @@
         }
 
         if (!over) {
-          paddle.position.set(paddleX, paddleY, 0);
-          ball.position.set(ballDir.x, ballDir.y, 0);
+          paddle.position.set(paddleX, paddleY, paddleZ);
+          ball.position.set(ballDir.x, ballDir.y, ballDir.z);
           scene.add(paddle);
           scene.add(ball);
         }
