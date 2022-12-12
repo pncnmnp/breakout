@@ -38,12 +38,30 @@
   <body>
     <canvas id="c" tabindex="0"></canvas>
     <div id="score"></div>
+    <audio id="background_music" src="./music/donau.mp3" loop></audio>
   </body>
   <script type="module">
     import * as THREE from "three";
     import { FontLoader } from "fontLoader";
     import { TextGeometry } from "geometries";
+
     let text_rendered = {};
+
+    var hit_sound = new Audio("./music/hit.mp3");
+
+    function background_music() {
+      let music = document.getElementById("background_music");
+      let playAttempt = setInterval(() => {
+        music
+          .play()
+          .then(() => {
+            clearInterval(playAttempt);
+          })
+          .catch((error) => {
+            //didn't play
+          });
+      }, 500);
+    }
 
     function renderCamera() {
       const canvas = document.querySelector("#c");
@@ -180,6 +198,11 @@
       let bricks = renderBricks(scene);
       renderBoundaries(scene);
 
+      background_music();
+
+      var score_div = document.getElementById("score");
+      score_div.innerHTML = "Score: 0";
+
       // setting aspect of the camera to the aspect of the canvas's display size
       if (resizeRendererToDisplaySize(renderer)) {
         const canvas = renderer.domElement;
@@ -289,6 +312,7 @@
             brick_collision.length > 0 &&
             brick_collision[0].distance < direction_vec.length()
           ) {
+            hit_sound.play();
             scene.remove(brick_collision[0].object);
             for (
               let brick_index = 0;
@@ -299,9 +323,10 @@
                 bricks.splice(brick_index, 1);
               }
             }
+
             score += 100;
-            var score_div = document.getElementById("score");
             score_div.innerHTML = "Score: " + score.toString();
+
             ballDir.dy *= -1;
             break;
           }
@@ -328,7 +353,6 @@
           scene.add(paddle);
           scene.add(ball);
         }
-        console.log(ballDir.x, ballDir.y, ballDir.z);
         renderer.render(scene, camera);
         requestAnimationFrame(render);
       }
