@@ -84,7 +84,7 @@
     }
 
     function renderBoundaries(scene) {
-      const material = new THREE.MeshPhongMaterial({ color: 0x5b5b5b });
+      const material = new THREE.MeshPhongMaterial({ color: 0x222222 });
 
       const planeLeft = new THREE.BoxGeometry(0.03, 2, 0.2);
       const planeLeftMesh = new THREE.Mesh(planeLeft, material);
@@ -131,8 +131,8 @@
         function (font) {
           const geometry = new TextGeometry(text, {
             font: font,
-            size: 1,
-            height: 1,
+            size: 0.5,
+            height: 0,
             curveSegments: 10,
             bevelEnabled: true,
             bevelThickness: 0.25,
