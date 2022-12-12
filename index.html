@@ -214,11 +214,6 @@
       ballDir.dz = ballDir.speed;
       ball.position.set(ballDir.x, ballDir.y, ballDir.z);
 
-      // Start at z = 0
-      // Keep a var - chance of moving the ball to z = -0.2
-      // When it occurs, move the ball to z = -0.2
-      // And so forth
-
       let over = false;
       function render(time) {
         ballDir.x += ballDir.dx;
@@ -296,8 +291,10 @@
           }
 
           if (ballDir.y > 0.6) {
+            // Reached the top
             ballDir.dy *= -1;
           } else if (ballDir.x > 1 || ballDir.x < -1) {
+            // Reached the sides
             ballDir.dx *= -1;
           } else if (ballDir.y < paddleY - 0.02) {
             // game over
